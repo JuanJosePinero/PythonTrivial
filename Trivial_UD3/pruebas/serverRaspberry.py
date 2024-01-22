@@ -6,8 +6,9 @@ from threading import Thread
 
 # Configuración del servidor
 host = '10.10.1.13'  # Dirección IP del servidor
-port = 22  # Puerto de comunicación
+port = 12345  # Puerto de comunicación
 
+# Función para manejar a un jugador
 # Función para manejar a un jugador
 def manejar_jugador(client_socket, jugador):
     # Inicializar puntuación del jugador
@@ -15,10 +16,6 @@ def manejar_jugador(client_socket, jugador):
 
     # Enviar mensaje de bienvenida al jugador
     client_socket.send("¡Bienvenido al Trivial! Espera a tu oponente para empezar.".encode())
-
-    # Esperar a que ambos jugadores estén listos
-    if jugador == 1:
-        input("Presiona Enter cuando el Jugador 2 esté listo...")  # Espera al Jugador 2
 
     # Comenzar el juego
     for ronda in range(5):  # 5 rondas de preguntas
@@ -44,6 +41,12 @@ def manejar_jugador(client_socket, jugador):
 
         # Enviar resultado de la ronda al jugador
         client_socket.send(f"Resultado de la ronda {ronda + 1}: Puntos: {puntuacion}\n".encode())
+
+    # Enviar puntuación final al jugador
+    client_socket.send(f"Fin del juego. Tu puntuación final es: {puntuacion} puntos.\n".encode())
+
+    # Cerrar la conexión con el jugador
+    client_socket.close()
 
     # Enviar puntuación final al jugador
     client_socket.send(f"Fin del juego. Tu puntuación final es: {puntuacion} puntos.\n".encode())
