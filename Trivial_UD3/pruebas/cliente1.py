@@ -2,7 +2,7 @@ import socket
 
 # Configura el socket del cliente
 server_ip = '10.10.1.13'
-server_port = 12345  # El mismo puerto que configuraste en el servidor
+server_port = 12321  # El mismo puerto que configuraste en el servidor
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((server_ip, server_port))
