@@ -2,6 +2,7 @@ import sys
 import pygame
 import csv
 import trivial
+import json
 
 
 pygame.font.init()
@@ -63,18 +64,27 @@ def main_menu():
 
 
 
-def save_credentials(email, password, nick):
-    with open("credentials.csv", "a", newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([email, password, nick])
+def save_credentials_as_json(email, password, nick):
+    # Crea un diccionario con los datos
+    data = {
+        "email": email,
+        "password": password,
+        "nick": nick
+    }
+
+    with open("credentials.json", "a") as json_file:
+        json.dump(data, json_file)
 
 def check_credentials(email, password):
-    with open("credentials.csv", "r", newline='') as file:
-        reader = csv.reader(file)
-        for stored_email, stored_password, stored_nick in reader:
-            if email == stored_email and password == stored_password:
-                print("Credentials Match!")
-                return True, stored_nick  # Devuelve también el nick
+    with open("credentials.json", "r") as json_file:
+        data = json.load(json_file)
+        stored_email = data.get("email")
+        stored_password = data.get("password")
+        stored_nick = data.get("nick")
+        
+        if email == stored_email and password == stored_password:
+            print("Credentials Match!")
+            return True, stored_nick  # Devuelve también el nick
     
     return False, None  # Devuelve False y None si no hay coincidencia
 
@@ -306,10 +316,15 @@ def registration():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if register_button.collidepoint(event.pos):
-                    save_credentials(email, password, nick)  # Guardar también el Nick
+                    save_credentials_as_json(email, password, nick)  # Guardar como JSON
                     print("Credentials saved")
                     run = False
-                    login()
+                    user_nick = login()
+                    if user_nick:  # Inicio de sesión exitoso
+                        jugar_trivial(user_nick)  # Inicia el juego con el nick del usuario
+                        return user_nick
+                    else:
+                        print("Invalid Credentials!")
 
         pygame.display.update()        
 
