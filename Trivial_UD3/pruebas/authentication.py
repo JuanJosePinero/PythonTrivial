@@ -3,6 +3,7 @@ import pygame
 import csv
 import trivial
 import json
+from email_validator import validate_email, EmailNotValidError
 
 
 pygame.font.init()
@@ -238,7 +239,7 @@ def registration():
     cursor_interval = 500
     font1 = pygame.font.SysFont("None", 50)
     font2 = pygame.font.SysFont("None", 25)
-
+    error_message = ""
     register_button = pygame.Rect(280, 450, 150, 40)  # Posición ajustada
 
     while run:
@@ -293,6 +294,10 @@ def registration():
         pygame.draw.rect(win, (0, 128, 0), register_button)  # Green button
         register_text = font2.render("Register", True, (255, 255, 255))  # White text
         win.blit(register_text, (register_button.x + 35, register_button.y + 10))
+        
+        if error_message:
+            error_text = font2.render(error_message, True, (255, 0, 0))  # Rojo para mensaje de error
+            win.blit(error_text, (50, 400))
 
         pygame.display.update()
 
@@ -326,15 +331,21 @@ def registration():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if register_button.collidepoint(event.pos):
-                    save_credentials_as_json(email, password, nick)  # Guardar como JSON
-                    print("Credentials saved")
-                    run = False
-                    user_nick = login()
-                    if user_nick:  # Inicio de sesión exitoso
-                        jugar_trivial(user_nick)  # Inicia el juego con el nick del usuario
-                        return user_nick
-                    else:
-                        print("Invalid Credentials!")
+                    try:
+                        # Intenta validar el email
+                        validate_email(email)
+                        save_credentials_as_json(email, password, nick)
+                        print("Credentials saved")
+                        run = False
+                        user_nick = login()
+                        if user_nick:
+                            jugar_trivial(user_nick)
+                        else:
+                            print("Invalid Credentials!")
+                    except EmailNotValidError as e:
+                        # Si el email no es válido, actualiza el mensaje de error
+                        error_message = f"Invalid email: {str(e)}"
+                        print(error_message)
 
         pygame.display.update()        
 
