@@ -55,7 +55,7 @@ def is_over_button(pos, x, y, width, height):
     return x < pos[0] < x + width and y < pos[1] < y + height
 
 # Función principal del juego
-def jugar_trivial():
+def jugar_trivial(user_nick):
     running = True
     clock = pygame.time.Clock()
     estado_juego = 'juego'
@@ -69,6 +69,9 @@ def jugar_trivial():
 
     while running:
         screen.fill(WHITE)
+        
+        draw_text(f"{user_nick}", font, RED, screen, screen_width - 200, 10)
+        
         mouse_pos = pygame.mouse.get_pos()
         
         tiempo_actual = pygame.time.get_ticks()
@@ -119,4 +122,5 @@ def jugar_trivial():
     pygame.quit()
 
 if __name__ == "__main__":
-    jugar_trivial()
+    user_nick = "UsuarioEjemplo"  # Sustituye esto con la variable real que contiene el nick del usuario
+    jugar_trivial(user_nick)

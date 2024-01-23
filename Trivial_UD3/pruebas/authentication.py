@@ -5,28 +5,80 @@ import trivial
 
 
 pygame.font.init()
+pygame.font.init()
 
 width = 800
 height = 600
 win = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Player")
 
+def main_menu():
+    run = True
+    clock = pygame.time.Clock()
+    font = pygame.font.SysFont("None", 50)
+
+    # Definición de los botones
+    login_button = pygame.Rect(280, 200, 240, 50)  # x, y, width, height
+    register_button = pygame.Rect(280, 300, 240, 50)
+
+    while run:
+        clock.tick(60)
+        win.fill((214, 234, 248))
+
+        # Título
+        title_text = font.render("Welcome!!", True, (0, 0, 0))
+        win.blit(title_text, (width / 2 - title_text.get_width() / 2, 100))
+
+        # Texto de los botones
+        login_text = font.render("Start", True, (255, 255, 255))
+        register_text = font.render("New Player", True, (255, 255, 255))
+
+        # Dibujar botones y centrar texto
+        pygame.draw.rect(win, (0, 128, 0), login_button)  # Botón verde
+        win.blit(login_text, (login_button.x + (login_button.width - login_text.get_width()) // 2,
+                              login_button.y + (login_button.height - login_text.get_height()) // 2))
+
+        pygame.draw.rect(win, (0, 128, 0), register_button)  # Botón verde
+        win.blit(register_text, (register_button.x + (register_button.width - register_text.get_width()) // 2,
+                                 register_button.y + (register_button.height - register_text.get_height()) // 2))
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if login_button.collidepoint(event.pos):
+                    user_nick = login()
+                    if user_nick:  # Inicio de sesión exitoso
+                        jugar_trivial(user_nick)  # Inicia el juego con el nick del usuario
+                        run = False
+                    else:
+                        print("Invalid Credentials!")
+                elif register_button.collidepoint(event.pos):
+                    registration()
+                    run = False
 
 
-def save_credentials(email, password):
+
+
+def save_credentials(email, password, nick):
     with open("credentials.csv", "a", newline='') as file:
-        writer=csv.writer(file)
-        writer.writerow([email, password])
+        writer = csv.writer(file)
+        writer.writerow([email, password, nick])
 
 def check_credentials(email, password):
     with open("credentials.csv", "r", newline='') as file:
         reader = csv.reader(file)
-        for stored_email, stored_password in reader:
+        for stored_email, stored_password, stored_nick in reader:
             if email == stored_email and password == stored_password:
                 print("Credentials Match!")
-                return True
-    print("Unmatched Credentials!")
-    return False
+                return True, stored_nick  # Devuelve también el nick
+    
+    return False, None  # Devuelve False y None si no hay coincidencia
+
+
 
 def login():
     run = True
@@ -94,22 +146,13 @@ def login():
         message_text = font2.render(message, True, (255, 0, 0))  # Red color for message
         win.blit(message_text, (280, 340))  # Adjust position as needed
 
-
+        login_successful, user_nick = check_credentials(email, password)
 
         # Username field (displayed after successful login)
         if login_successful:
-            username_prompt = font2.render("Enter Username:", 1, (0, 0, 0))
-            win.blit(username_prompt, (50, 450))
-            pygame.draw.rect(win, (255, 255, 255), (280, 450, 350, 30))  # Username input box
-            pygame.draw.rect(win, (0, 0, 0), (280, 450, 350, 30), 2)
-            username_text = font2.render(username, True, (0, 0, 0))
-            win.blit(username_text, (285, 455))
-
-            # Draw Next button
-            pygame.draw.rect(win, (0, 128, 0), next_button)  # Green button
-            next_text = font2.render("Next", True, (255, 255, 255))  # White text
-            win.blit(next_text, (next_button.x + (next_button.width - next_text.get_width()) // 2,
-                                 next_button.y + (next_button.height - next_text.get_height()) // 2))
+            print(f"Login successful! Nick: {user_nick}")
+            trivial.jugar_trivial(user_nick)
+            return user_nick
 
 
             # Draw username cursor
@@ -142,19 +185,14 @@ def login():
                         password += event.unicode
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if login_button.collidepoint(event.pos):
-                    if not login_successful and check_credentials(email, password):
-                        message = "Login successful!"
-                        login_successful = True
-                        active_field = "username"
-                        trivial.jugar_trivial()
-                        run = False
+                    login_successful, user_nick = check_credentials(email, password)
+                    if login_successful:
+                        print(f"Login successful! Nick: {user_nick}")
+                        return user_nick  # Devuelve el nick en caso de éxito
                     else:
                         message = "Invalid Credentials!"
                         email = ""
                         password = ""
-                elif next_button.collidepoint(event.pos) and login_successful:
-                    print(f"Username {username} saved for client window.")
-                    return username  # Or handle the username as needed
 
 
             if active_field == "username" and event.type == pygame.KEYDOWN:
@@ -165,7 +203,7 @@ def login():
 
 
 
-    return ""  # Return empty string if login is unsuccessful
+    return None  # Return empty string if login is unsuccessful
 
 
 def registration():
@@ -173,16 +211,15 @@ def registration():
     clock = pygame.time.Clock()
     email = ""
     password = ""
-    active_field = "email"  # Tracks which field is active, starts with email
-    cursor_visible = True  # Cursor visibility flag
+    nick = ""  # Variable para el Nick
+    active_field = "email"
+    cursor_visible = True
     last_cursor_toggle = pygame.time.get_ticks()
-    cursor_interval = 500  # Cursor blink interval in milliseconds
-
-    # Define the register button dimensions and position
-    register_button = pygame.Rect(280, 400, 150, 40)  # x, y, width, height
-
+    cursor_interval = 500
     font1 = pygame.font.SysFont("None", 50)
     font2 = pygame.font.SysFont("None", 25)
+
+    register_button = pygame.Rect(280, 450, 150, 40)  # Posición ajustada
 
     while run:
         clock.tick(60)
@@ -220,6 +257,17 @@ def registration():
         if active_field == "password" and cursor_visible:
             cursor_x = 285 + password_text.get_width()
             pygame.draw.line(win, (0, 0, 0), (cursor_x, 305), (cursor_x, 325))
+            
+        nick_prompt = font2.render("Enter Nick:", 1, (0, 0, 0))
+        win.blit(nick_prompt, (50, 350))
+        pygame.draw.rect(win, (255, 255, 255), (280, 350, 350, 30))  # Cuadro de texto para Nick
+        pygame.draw.rect(win, (0, 0, 0), (280, 350, 350, 30), 2)
+        nick_text = font2.render(nick, True, (0, 0, 0))
+        win.blit(nick_text, (285, 355))
+        
+        if active_field == "nick" and cursor_visible:
+            cursor_x = 285 + nick_text.get_width()
+            pygame.draw.line(win, (0, 0, 0), (cursor_x, 355), (cursor_x, 375))
 
         # Register button
         pygame.draw.rect(win, (0, 128, 0), register_button)  # Green button
@@ -238,24 +286,34 @@ def registration():
                         email = email[:-1]
                     elif active_field == "password" and password:
                         password = password[:-1]
+                    elif active_field == "nick" and nick:
+                        nick = nick[:-1]
                 elif event.key == pygame.K_TAB:
-                    # Switch active field between email and password
-                    active_field = "password" if active_field == "email" else "email"
+                    # Cambio de campo activo
+                    if active_field == "email":
+                        active_field = "password"
+                    elif active_field == "password":
+                        active_field = "nick"
+                    elif active_field == "nick":
+                        active_field = "email"
                 else:
                     if active_field == "email" and len(email) < 50:
                         email += event.unicode
                     elif active_field == "password" and len(password) < 20:
                         password += event.unicode
+                    elif active_field == "nick" and len(nick) < 20:
+                        nick += event.unicode
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if register_button.collidepoint(event.pos):
-                    save_credentials(email, password)  # Save credentials
+                    save_credentials(email, password, nick)  # Guardar también el Nick
                     print("Credentials saved")
-                    run=False
+                    run = False
                     login()
-                    pygame.display.update()
+
+        pygame.display.update()        
 
 
 
 if __name__ == '__main__':
-    registration()
+    main_menu()
