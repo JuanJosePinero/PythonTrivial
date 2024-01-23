@@ -1,57 +1,122 @@
+import pygame
 import random
-from preguntas import preguntas  # Importa la lista de preguntas desde preguntas.py
-from usuarios import usuarios  # Importa la lista de usuarios desde usuarios.py
+from preguntas import preguntas  # Asegúrate de que este archivo esté correctamente importado
 
-# Función para realizar el juego
+# Configuraciones iniciales de Pygame
+pygame.init()
+screen_width = 800
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('Juego Trivial')
+
+# Colores y fuente
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+font = pygame.font.Font(None, 36)
+
+# Funciones auxiliares
+def draw_text(text, font, color, surface, x, y):
+    max_length = 55  # Máximo número de caracteres en una línea
+    if len(text) > max_length:
+        # Divide el texto en dos líneas
+        split_point = text.rfind(' ', 0, max_length)  # Encuentra un espacio para dividir
+        if split_point == -1:  # Si no hay espacio, divide en el máximo
+            split_point = max_length
+
+        text1 = text[:split_point]
+        text2 = text[split_point:].strip()
+
+        # Renderiza y dibuja la primera línea
+        textobj1 = font.render(text1, True, color)
+        textrect1 = textobj1.get_rect()
+        textrect1.topleft = (x, y)
+        surface.blit(textobj1, textrect1)
+
+        # Renderiza y dibuja la segunda línea
+        textobj2 = font.render(text2, True, color)
+        textrect2 = textobj2.get_rect()
+        textrect2.topleft = (x, y + textrect1.height)  # Coloca debajo de la primera línea
+        surface.blit(textobj2, textrect2)
+    else:
+        # Si el texto es corto, lo maneja como antes
+        textobj = font.render(text, True, color)
+        textrect = textobj.get_rect()
+        textrect.topleft = (x, y)
+        surface.blit(textobj, textrect)
+
+def draw_button(text, font, color, surface, x, y, width, height):
+    pygame.draw.rect(surface, color, (x, y, width, height))
+    draw_text(text, font, BLACK, surface, x + 10, y + 10)
+
+def is_over_button(pos, x, y, width, height):
+    return x < pos[0] < x + width and y < pos[1] < y + height
+
+# Función principal del juego
 def jugar_trivial():
-    # Inicializar puntuaciones de los jugadores
-    puntuaciones = {}
+    running = True
+    clock = pygame.time.Clock()
+    estado_juego = 'juego'
+    pregunta_actual = 0
+    preguntas_aleatorias = random.sample(preguntas, 5)
+    puntuacion = 0
+    
+    mensaje_respuesta = ''  # Variable para almacenar el mensaje de respuesta
+    mostrar_mensaje = False
+    tiempo_mensaje = 0
 
-    # Solicitar a los jugadores que inicien el juego
-    for jugador in range(2):
-        usuario_valido = False
-        while not usuario_valido:
-            username = input(f"Ingrese el nombre de usuario del Jugador {jugador + 1}: ")
-            password = input("Ingrese la contraseña: ")
-            
-            # Verificar si las credenciales son válidas
-            for user in usuarios:
-                if user["usuario"] == username and user["contrasenya"] == password:
-                    usuario_valido = True
-                    break
-            
-            if not usuario_valido:
-                print("Nombre de usuario o contraseña incorrectos. Inténtalo de nuevo.")
+    while running:
+        screen.fill(WHITE)
+        mouse_pos = pygame.mouse.get_pos()
+        
+        tiempo_actual = pygame.time.get_ticks()
 
-        print(f"\n¡Bienvenido, {username}! Presiona Enter para comenzar el juego.\n")
-        input("Presiona Enter para continuar...")
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-        # Seleccionar 5 preguntas aleatorias de la lista de preguntas importada
-        preguntas_aleatorias = random.sample(preguntas, 5)
+            if estado_juego == 'juego' and event.type == pygame.MOUSEBUTTONDOWN:
+                pregunta = preguntas_aleatorias[pregunta_actual]
+                for i, opcion in enumerate(pregunta['opciones']):
+                    if is_over_button(mouse_pos, 50, 150 + i * 60, 700, 50):
+                        if chr(97 + i) == pregunta['respuesta_correcta']:
+                            puntuacion += 10
+                            mensaje_respuesta = "¡Respuesta Correcta!"
+                        else:
+                            mensaje_respuesta = "Incorrecto. La respuesta correcta era: " + pregunta['opciones'][ord(pregunta['respuesta_correcta']) - 97]
+                        mostrar_mensaje = True
+                        pygame.time.delay(1000)  # Retardo de 1 segundo para mostrar el mensaje
+                        pregunta_actual += 1
+                        if pregunta_actual >= len(preguntas_aleatorias):
+                            estado_juego = 'resultado'
+                        break
+                    
+                if mostrar_mensaje:
+                    tiempo_mensaje = tiempo_actual
+                    
+        if mostrar_mensaje and tiempo_actual - tiempo_mensaje < 2000:  # 2000 milisegundos = 2 segundos
+            draw_text(mensaje_respuesta, font, RED, screen, 50, 120)
+        else:
+            mostrar_mensaje = False  # Ajusta la posición según sea necesario
 
-        print(f"\nComienza el juego para {username}.\n")
-
-        # Inicializar puntuación del jugador
-        puntuaciones[username] = 0
-
-        for idx, pregunta in enumerate(preguntas_aleatorias, start=1):
-            print(f"Pregunta {idx}: {pregunta['pregunta']}")
-            for opcion in pregunta['opciones']:
-                print(opcion)
-            
-            respuesta = input("Ingrese la letra de la respuesta correcta: ").lower()
-
-            if respuesta == pregunta['respuesta_correcta']:
-                print("¡Respuesta correcta! Ganaste 10 puntos.\n")
-                puntuaciones[username] += 10
+        if estado_juego == 'juego':
+            if pregunta_actual < len(preguntas_aleatorias):
+                pregunta = preguntas_aleatorias[pregunta_actual]
+                draw_text(f"Pregunta {pregunta_actual + 1}: {pregunta['pregunta']}", font, BLACK, screen, 50, 50)
+                for i, opcion in enumerate(pregunta['opciones']):
+                    draw_button(opcion, font, BLUE, screen, 50, 150 + i * 60, 700, 50)
             else:
-                print("Respuesta incorrecta. No ganaste puntos.\n")
+                estado_juego = 'resultado'
 
-        print(f"Fin del juego para {username}. Tu puntuación es: {puntuaciones[username]} puntos.\n")
+        elif estado_juego == 'resultado':
+            draw_text(f"Puntuación final: {puntuacion}", font, GREEN, screen, 50, 50)
 
-    # Determinar al ganador
-    ganador = max(puntuaciones, key=puntuaciones.get)
-    print(f"¡El ganador es {ganador} con {puntuaciones[ganador]} puntos!")
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
 
 if __name__ == "__main__":
     jugar_trivial()
