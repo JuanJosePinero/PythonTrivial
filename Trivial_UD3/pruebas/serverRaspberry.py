@@ -1,28 +1,31 @@
 import socket
-from threading import Thread
-from preguntas import preguntas  # Asegúrate de que este archivo exista
-from usuarios import usuarios  # Asegúrate de que este archivo exista
 import random
+from preguntas import preguntas  # Importa la lista de preguntas desde preguntas.py
+from usuarios import usuarios  # Importa la lista de usuarios desde usuarios.py
+from threading import Thread
 
 # Configuración del servidor
-host = 'localhost'
-port = 9006
+host = '10.10.1.13'  # Dirección IP del servidor
+port = 12322  # Puerto de comunicación
+
+# Lista de clientes conectados
 clientes = []
 
+# Función para manejar a un cliente
 def manejar_cliente(client_socket):
-    print("Manejando nuevo cliente")
+    # Agregar el cliente a la lista
     clientes.append(client_socket)
 
+    # Iniciar sesión de usuario
     usuario_valido = None
     while usuario_valido is None:
+        # Solicitar nombre de usuario y contraseña
         client_socket.send("Ingresa tu nombre de usuario: ".encode())
         username = client_socket.recv(1024).decode()
-        print(f"Nombre de usuario recibido: {username}")
-        
         client_socket.send("Ingresa tu contraseña: ".encode())
         password = client_socket.recv(1024).decode()
-        print(f"Contraseña recibida: [oculta por seguridad]")
 
+        # Verificar si las credenciales son válidas
         for user in usuarios:
             if user["usuario"] == username and user["contrasenya"] == password:
                 usuario_valido = user
@@ -33,17 +36,22 @@ def manejar_cliente(client_socket):
 
     client_socket.send(f"\n¡Bienvenido, {username}! Presiona Enter cuando el otro jugador esté listo.\n".encode())
 
+    # Esperar a que ambos jugadores estén listos
     if len(clientes) == 2:
-        print("Iniciando el juego con 2 jugadores")
+        for cliente in clientes:
+            cliente.send("Ambos jugadores están listos. Presiona Enter para comenzar el juego.".encode())
+        
+        # Iniciar el juego
         jugar_trivial(clientes)
 
+# Función para jugar el Trivial
 def jugar_trivial(clientes):
+    # Seleccionar 5 preguntas aleatorias de la lista de preguntas
     preguntas_aleatorias = random.sample(preguntas, 5)
 
     for cliente in clientes:
         cliente.send("\nComienza el juego.\n".encode())
 
-    puntuaciones = [0, 0]
     for ronda, pregunta in enumerate(preguntas_aleatorias, start=1):
         pregunta_texto = pregunta['pregunta']
         opciones = pregunta['opciones']
@@ -57,24 +65,32 @@ def jugar_trivial(clientes):
 
         respuestas = [cliente.recv(1024).decode().strip().lower() for cliente in clientes]
 
-        for i, respuesta in enumerate(respuestas):
-            if respuesta == respuesta_correcta:
-                puntuaciones[i] += 10
-                clientes[i].send(f"Correcto! Puntos: {puntuaciones[i]}\n".encode())
-            else:
-                clientes[i].send(f"Incorrecto. Puntos: {puntuaciones[i]}\n".encode())
+        puntuaciones = [10 if respuesta == respuesta_correcta else 0 for respuesta in respuestas]
 
-    for i, cliente in enumerate(clientes):
+        for i, cliente in enumerate(clientes):
+            cliente.send(f"Resultado de la ronda {ronda}: Puntos: {puntuaciones[i]}\n".encode())
+
+    puntuaciones_finales = {cliente.getpeername(): sum(puntuaciones) for cliente, puntuacion in zip(clientes, puntuaciones)}
+
+    for cliente in clientes:
         cliente.send("Fin del juego.\n".encode())
-        cliente.send(f"Tus puntuaciones finales son: {puntuaciones[i]} puntos.\n".encode())
+        cliente.send(f"Tus puntuaciones finales son: {puntuaciones_finales[cliente.getpeername()]} puntos.\n".encode())
+
+    # Cerrar la conexión con los clientes
+    for cliente in clientes:
         cliente.close()
 
+# Configurar el socket del servidor
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((host, port))
-server_socket.listen(2)
+server_socket.listen(2)  # Permitir 2 conexiones (para 2 jugadores)
+
 print(f"Servidor en ejecución en {host}:{port}")
 
+# Esperar a que los jugadores se conecten
 while len(clientes) < 2:
     client_socket, addr = server_socket.accept()
     print(f"Conexión establecida desde {addr}")
+
+    # Iniciar un hilo para manejar al cliente
     Thread(target=manejar_cliente, args=(client_socket,)).start()
