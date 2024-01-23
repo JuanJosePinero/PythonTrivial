@@ -65,28 +65,38 @@ def main_menu():
 
 
 def save_credentials_as_json(email, password, nick):
-    # Crea un diccionario con los datos
-    data = {
-        "email": email,
-        "password": password,
-        "nick": nick
-    }
+    users = []
 
-    with open("credentials.json", "a") as json_file:
-        json.dump(data, json_file)
+    # Intentar leer el archivo existente y cargar los usuarios
+    try:
+        with open("credentials.json", "r") as file:
+            users = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Si el archivo no existe o está vacío, continuar con una lista vacía
+        pass
+
+    # Agregar el nuevo usuario a la lista
+    users.append({"email": email, "password": password, "nick": nick})
+
+    # Reescribir el archivo con la lista actualizada
+    with open("credentials.json", "w") as file:
+        json.dump(users, file)
+ 
+
 
 def check_credentials(email, password):
-    with open("credentials.json", "r") as json_file:
-        data = json.load(json_file)
-        stored_email = data.get("email")
-        stored_password = data.get("password")
-        stored_nick = data.get("nick")
-        
-        if email == stored_email and password == stored_password:
-            print("Credentials Match!")
-            return True, stored_nick  # Devuelve también el nick
-    
-    return False, None  # Devuelve False y None si no hay coincidencia
+    try:
+        with open("credentials.json", "r") as file:
+            users = json.load(file)
+            for user in users:
+                if user["email"] == email and user["password"] == password:
+                    return True, user["nick"]
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Archivo no encontrado o vacío
+        pass
+
+    return False, None
+  
 
 
 

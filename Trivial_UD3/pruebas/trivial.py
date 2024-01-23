@@ -1,5 +1,6 @@
 import pygame
 import random
+import csv
 from preguntas import preguntas  # Asegúrate de que este archivo esté correctamente importado
 
 # Configuraciones iniciales de Pygame
@@ -63,17 +64,14 @@ def jugar_trivial(user_nick):
     preguntas_aleatorias = random.sample(preguntas, 5)
     puntuacion = 0
     
-    mensaje_respuesta = ''  # Variable para almacenar el mensaje de respuesta
+    mensaje_respuesta = ''
     mostrar_mensaje = False
     tiempo_mensaje = 0
 
     while running:
         screen.fill(WHITE)
-        
         draw_text(f"{user_nick}", font, RED, screen, screen_width - 200, 10)
-        
         mouse_pos = pygame.mouse.get_pos()
-        
         tiempo_actual = pygame.time.get_ticks()
 
         for event in pygame.event.get():
@@ -90,7 +88,7 @@ def jugar_trivial(user_nick):
                         else:
                             mensaje_respuesta = "Incorrecto. La respuesta correcta era: " + pregunta['opciones'][ord(pregunta['respuesta_correcta']) - 97]
                         mostrar_mensaje = True
-                        pygame.time.delay(1000)  # Retardo de 1 segundo para mostrar el mensaje
+                        pygame.time.delay(1000)
                         pregunta_actual += 1
                         if pregunta_actual >= len(preguntas_aleatorias):
                             estado_juego = 'resultado'
@@ -99,10 +97,10 @@ def jugar_trivial(user_nick):
                 if mostrar_mensaje:
                     tiempo_mensaje = tiempo_actual
                     
-        if mostrar_mensaje and tiempo_actual - tiempo_mensaje < 2000:  # 2000 milisegundos = 2 segundos
+        if mostrar_mensaje and tiempo_actual - tiempo_mensaje < 2000:
             draw_text(mensaje_respuesta, font, RED, screen, 50, 120)
         else:
-            mostrar_mensaje = False  # Ajusta la posición según sea necesario
+            mostrar_mensaje = False
 
         if estado_juego == 'juego':
             if pregunta_actual < len(preguntas_aleatorias):
@@ -115,11 +113,35 @@ def jugar_trivial(user_nick):
 
         elif estado_juego == 'resultado':
             draw_text(f"Puntuación final: {puntuacion}", font, GREEN, screen, 50, 50)
+            running = False  # Cambia a False para salir del bucle después de mostrar la puntuación
 
         pygame.display.flip()
         clock.tick(60)
 
+    # Guardar la puntuación en el archivo CSV
+    with open('puntuaciones.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([user_nick, puntuacion])
+
+    # Leer y mostrar las puntuaciones
+    puntuaciones = []
+    with open('puntuaciones.csv', mode='r', newline='') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            puntuaciones.append(row)
+
+    # Mostrar las puntuaciones en la pantalla
+    screen.fill(WHITE)  # Limpia la pantalla antes de mostrar las puntuaciones
+    y_pos = 100
+    for nick, score in puntuaciones:
+        draw_text(f"{nick}: {score}", font, BLUE, screen, 50, y_pos)
+        y_pos += 30
+
+    pygame.display.flip()
+    pygame.time.delay(5000)  # Espera 5 segundos antes de cerrar
+
     pygame.quit()
+
 
 if __name__ == "__main__":
     user_nick = "UsuarioEjemplo"  # Sustituye esto con la variable real que contiene el nick del usuario

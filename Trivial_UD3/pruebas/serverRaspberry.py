@@ -1,11 +1,12 @@
 import socket
 import random
 from preguntas import preguntas  # Importa la lista de preguntas desde preguntas.py
-from usuarios import usuarios  # Importa la lista de usuarios desde usuarios.py
+
 from threading import Thread
+import json
 
 # Configuración del servidor
-host = '10.10.1.13'  # Dirección IP del servidor
+host = '10.10.1.109'  # Dirección IP del servidor
 port = 12322  # Puerto de comunicación
 
 # Lista de clientes conectados
@@ -18,21 +19,23 @@ def manejar_cliente(client_socket):
 
     # Iniciar sesión de usuario
     usuario_valido = None
-    while usuario_valido is None:
-        # Solicitar nombre de usuario y contraseña
-        client_socket.send("Ingresa tu nombre de usuario: ".encode())
-        username = client_socket.recv(1024).decode()
-        client_socket.send("Ingresa tu contraseña: ".encode())
-        password = client_socket.recv(1024).decode()
+    with open("usuarios.json", "r") as json_file:
+        usuarios = json.load(json_file)
+        while usuario_valido is None:
+            # Solicitar nombre de usuario y contraseña
+            client_socket.send("Ingresa tu nombre de usuario: ".encode())
+            username = client_socket.recv(1024).decode()
+            client_socket.send("Ingresa tu contraseña: ".encode())
+            password = client_socket.recv(1024).decode()
 
-        # Verificar si las credenciales son válidas
-        for user in usuarios:
-            if user["usuario"] == username and user["contrasenya"] == password:
-                usuario_valido = user
-                break
+            # Verificar si las credenciales son válidas
+            for user_data in usuarios_data:
+                if user_data["email"] == username and user_data["password"] == password:
+                    usuario_valido = user_data
+                    break
 
-        if usuario_valido is None:
-            client_socket.send("Nombre de usuario o contraseña incorrectos. Inténtalo de nuevo.".encode())
+            if usuario_valido is None:
+                client_socket.send("Nombre de usuario o contraseña incorrectos. Inténtalo de nuevo.".encode())
 
     client_socket.send(f"\n¡Bienvenido, {username}! Presiona Enter cuando el otro jugador esté listo.\n".encode())
 
