@@ -1,19 +1,16 @@
 import socket
 import random
 from preguntas import preguntas  # Importa la lista de preguntas desde preguntas.py
-import threading
+
 from threading import Thread
 import json
 
 # Configuración del servidor
-host = '10.10.1.13'  # Dirección IP del servidor
+host = '10.10.1.109'  # Dirección IP del servidor
 port = 12322  # Puerto de comunicación
 
 # Lista de clientes conectados
 clientes = []
-
-# Evento global para sincronizar la conexión de los jugadores
-jugadores_listos = threading.Event()
 
 # Función para manejar a un cliente
 def manejar_cliente(client_socket):
@@ -22,7 +19,7 @@ def manejar_cliente(client_socket):
 
     # Iniciar sesión de usuario
     usuario_valido = None
-    with open("credentials.json", "r") as json_file:
+    with open("usuarios.json", "r") as json_file:
         usuarios = json.load(json_file)
         while usuario_valido is None:
             # Solicitar nombre de usuario y contraseña
@@ -44,14 +41,11 @@ def manejar_cliente(client_socket):
 
     # Esperar a que ambos jugadores estén listos
     if len(clientes) == 2:
-        # Activar el evento cuando ambos jugadores estén conectados
-        jugadores_listos.set()
-
-    # Esperar hasta que el evento se active
-    jugadores_listos.wait()
-
-    # Continuar con el inicio del juego
-    jugar_trivial(clientes)
+        for cliente in clientes:
+            cliente.send("Ambos jugadores están listos. Presiona Enter para comenzar el juego.".encode())
+        
+        # Iniciar el juego
+        jugar_trivial(clientes)
 
 # Función para jugar el Trivial
 def jugar_trivial(clientes):
