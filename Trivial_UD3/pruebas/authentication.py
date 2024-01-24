@@ -53,7 +53,7 @@ def main_menu():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if login_button.collidepoint(event.pos):
-                    user_nick = login()
+                    user_nick = login('10.10.1.13', 12323)
                     if user_nick:  # Inicio de sesión exitoso
                         jugar_trivial(user_nick)  # Inicia el juego con el nick del usuario
                         run = False
@@ -102,7 +102,7 @@ def check_credentials(email, password):
 
 
 
-def login():
+def login(server_ip, server_port):
     run = True
     clock = pygame.time.Clock()
     email = ""
