@@ -172,9 +172,27 @@ def login():
         # Username field (displayed after successful login)
         if login_successful:
             print(f"Login successful! Nick: {user_nick}")
-            trivial.jugar_trivial(user_nick)
-            return user_nick
+            
+            # Mostrar pantalla de espera
+            espera_texto = font1.render("Esperando al segundo jugador...", True, (0, 0, 0))
+            win.blit(espera_texto, (width / 2 - espera_texto.get_width() / 2, 350))
+            pygame.display.update()
 
+            # Conectarse al servidor y esperar confirmación
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((server_ip, server_port))
+            client_socket.send("Conectado y listo.".encode())
+
+            # Esperar confirmación del servidor
+            while True:
+                server_message = client_socket.recv(1024).decode()
+                if server_message == "Ambos jugadores conectados":
+                    break
+
+            # Una vez confirmados los dos jugadores, iniciar el juego
+            jugar_trivial(user_nick)
+            client_socket.close()
+            return user_nick
 
             # Draw username cursor
             if active_field == "username" and cursor_visible:
