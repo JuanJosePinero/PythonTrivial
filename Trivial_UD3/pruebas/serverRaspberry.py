@@ -7,7 +7,7 @@ import json
 
 # Configuración del servidor
 host = '10.10.1.13'  # Dirección IP del servidor
-port = 12323  # Puerto de comunicación
+port = 12322  # Puerto de comunicación
 
 # Lista de clientes conectados
 clientes = []

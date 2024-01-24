@@ -4,46 +4,76 @@ import csv
 import trivial
 import json
 import socket
+import threading
 from email_validator import validate_email, EmailNotValidError
 
 
 pygame.font.init()
-pygame.font.init()
+
 
 width = 800
 height = 600
 win = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Player")
 
+def network_thread_function(server_ip, server_port, shared_data):
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((server_ip, server_port))
+        client_socket.send("Conectado y listo.".encode())
+
+        while True:
+            server_message = client_socket.recv(1024).decode()
+            if server_message:
+                shared_data["server_message"] = server_message
+                if server_message == "Ambos jugadores conectados":
+                    break
+    except socket.error as e:
+        print(f"Error de red: {e}")
+        shared_data["server_message"] = "Error de conexión"
+    finally:
+        client_socket.close()
+
+
 def main_menu():
     run = True
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("None", 50)
+    shared_data = {"server_message": ""}
+    
+    # Iniciar hilo de red
+    network_thread = threading.Thread(target=network_thread_function, args=('10.10.1.13', 12322, shared_data))
+    network_thread.start()
 
     # Definición de los botones
     login_button = pygame.Rect(280, 200, 240, 50)  # x, y, width, height
     register_button = pygame.Rect(280, 300, 240, 50)
+    
+    # Definir las variables de texto fuera del bucle
+    font = pygame.font.SysFont("None", 50)
+    login_text = font.render("Login", True, (255, 255, 255))
+    register_text = font.render("New Player", True, (255, 255, 255))
 
     while run:
         clock.tick(60)
         win.fill((214, 234, 248))
 
-        # Título
+        # Revisar y reaccionar a los mensajes del servidor
+        if shared_data["server_message"] == "Ambos jugadores conectados":
+            jugar_trivial(user_nick)  # Asegúrate de que user_nick esté definido
+            run = False
+
+
+        # Título y botones
         title_text = font.render("Welcome!!", True, (0, 0, 0))
         win.blit(title_text, (width / 2 - title_text.get_width() / 2, 100))
-
-        # Texto de los botones
-        login_text = font.render("Start", True, (255, 255, 255))
-        register_text = font.render("New Player", True, (255, 255, 255))
-
-        # Dibujar botones y centrar texto
         pygame.draw.rect(win, (0, 128, 0), login_button)  # Botón verde
-        win.blit(login_text, (login_button.x + (login_button.width - login_text.get_width()) // 2,
-                              login_button.y + (login_button.height - login_text.get_height()) // 2))
+        win.blit(login_text, (login_button.x + (login_button.width - login_text.get_width()) // 2, login_button.y + (login_button.height - login_text.get_height()) // 2))
 
         pygame.draw.rect(win, (0, 128, 0), register_button)  # Botón verde
-        win.blit(register_text, (register_button.x + (register_button.width - register_text.get_width()) // 2,
-                                 register_button.y + (register_button.height - register_text.get_height()) // 2))
+        win.blit(register_text, (register_button.x + (register_button.width - register_text.get_width()) // 2, register_button.y + (register_button.height - register_text.get_height()) // 2))
+        
+        
 
         pygame.display.update()
 
@@ -53,7 +83,7 @@ def main_menu():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if login_button.collidepoint(event.pos):
-                    user_nick = login('10.10.1.13', 12323)
+                    user_nick = login('10.10.1.13', 12322)
                     if user_nick:  # Inicio de sesión exitoso
                         jugar_trivial(user_nick)  # Inicia el juego con el nick del usuario
                         run = False
@@ -63,7 +93,8 @@ def main_menu():
                     registration()
                     run = False
 
-
+    # Asegúrate de unirte al hilo de red antes de cerrar la aplicación
+    network_thread.join()
 
 
 def save_credentials_as_json(email, password, nick):
