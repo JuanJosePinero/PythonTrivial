@@ -3,6 +3,7 @@ import pygame
 import csv
 import trivial
 import json
+import socket
 from email_validator import validate_email, EmailNotValidError
 
 

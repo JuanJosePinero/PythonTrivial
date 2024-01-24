@@ -22,7 +22,7 @@ def manejar_cliente(client_socket):
 
     # Iniciar sesión de usuario
     usuario_valido = None
-    with open("usuarios.json", "r") as json_file:
+    with open("credentials.json", "r") as json_file:
         usuarios = json.load(json_file)
         while usuario_valido is None:
             # Solicitar nombre de usuario y contraseña
